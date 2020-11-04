@@ -46,7 +46,9 @@ nzv_var <- nearZeroVar(dat_train)
 dat_train <- dat_train[ , -nzv_var]
 ```
 
-The testing data are only 20 samples and should not be used for model testing. In order to judge the out of sample error, the training data is divided into training and test data. 
+### Cross Validation
+
+The testing data are only 20 samples and should not be used for model testing. In order to judge the out of sample error, the training data is divided into training and test data (80 to 20%) by cross validation. 
 
 ```{r}
 train_ind <- createDataPartition(dat_train$classe, p = 0.8, list = FALSE)

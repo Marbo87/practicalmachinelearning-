@@ -410,7 +410,10 @@ dat_train &lt;- dat_train[,-c(1:7)]
 dat_test &lt;- dat_test[,-c(1:7)] 
 nzv_var &lt;- nearZeroVar(dat_train)
 dat_train &lt;- dat_train[ , -nzv_var]</code></pre>
-<p>The testing data are only 20 samples and should not be used for model testing. In order to judge the out of sample error, the training data is divided into training and test data.</p>
+</div>
+<div id="cross-validation" class="section level3">
+<h3>Cross Validation</h3>
+<p>The testing data are only 20 samples and should not be used for model testing. In order to judge the out of sample error, the training data is divided into training and test data (80 to 20%) by cross validation.</p>
 <pre class="r"><code>train_ind &lt;- createDataPartition(dat_train$classe, p = 0.8, list = FALSE)
 trainData &lt;- dat_train[train_ind, ] 
 testData &lt;- dat_train[-train_ind, ] </code></pre>
