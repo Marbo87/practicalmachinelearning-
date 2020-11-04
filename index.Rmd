@@ -1,0 +1,96 @@
+---
+title: "Report"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introduction
+
+The goal of this report is to use data from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here:
+[groupware](http://groupware.les.inf.puc-rio.br/har), 
+
+The reference is: Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+### Loading the data
+
+The data for training and testing are downloaded and stored. The outcome classe is converted to a factor variable.
+
+```{r, cache=TRUE}
+dat_train = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+dat_test = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+dat_train$classe <- factor(dat_train$classe)
+```
+
+### Data preparation 
+
+By comparing the dimensions of the training data and that of the complete cases, many NAs are observed. Columns with NAs are deleted. Furthermore, some Variables are not important for our purpose, so they are removed from the dataframe. 
+
+```{r, warning=FALSE}
+library(caret)
+library(rpart)
+set.seed(123) 
+# analyze data for NA values
+dim(dat_test)
+dim(dat_train)
+dim(dat_train[complete.cases(dat_train), ])
+# remove columns with missing data
+dat_train <- dat_train[,colSums(is.na(dat_train)) == 0]
+dat_test <- dat_test[,colSums(is.na(dat_test)) == 0]
+# remove data that are not important for the outcome classe
+dat_train <- dat_train[,-c(1:7)] 
+dat_test <- dat_test[,-c(1:7)] 
+nzv_var <- nearZeroVar(dat_train)
+dat_train <- dat_train[ , -nzv_var]
+```
+
+The testing data are only 20 samples and should not be used for model testing. In order to judge the out of sample error, the training data is divided into training and test data. 
+
+```{r}
+train_ind <- createDataPartition(dat_train$classe, p = 0.8, list = FALSE)
+trainData <- dat_train[train_ind, ] 
+testData <- dat_train[-train_ind, ] 
+```
+
+### Decision tree model
+
+First, the decision tree model is applied to the training data. Then the outcome is predicted for the test-data and the accuracy is estimated.
+
+```{r, cache=TRUE}
+fit_dec_tree <- rpart(classe ~ ., data = trainData, method="class")
+predict_dec_tree <- predict(fit_dec_tree, newdata = testData, type="class")
+conf_mat_dec_tree <- confusionMatrix(predict_dec_tree, testData$classe)
+conf_mat_dec_tree
+```
+
+### Generalized boosted model
+
+Next, the generalized boosted model is used.
+Cross validation with a value of five and two repeats is chosen to increase accuracy, for a good compromise between bias and variance. 
+
+```{r, cache=TRUE}
+ctrl_gbm <- trainControl(method = "repeatedcv", number = 5, repeats = 2)
+fit_gbm  <- train(classe ~ ., data = trainData, method = "gbm",
+                  trControl = ctrl_gbm, verbose = FALSE)
+predict_gbm <- predict(fit_gbm, newdata = testData)
+conf_matrix_gbm <- confusionMatrix(predict_gbm, testData$classe)
+conf_matrix_gbm
+```
+
+### Out of sample error
+
+Since accuracy of the generalized boosted model is at 96% much higher than that of the decision tree model with 75%, the generalized boosted model is adopted in the current work. Thus the expected out of sample error is 96%.
+
+* Decision tree model: 75%
+* Generalized boosted model: 96%
+
+
+### Prediction of 20 different test cases
+
+The generalized boosted model is applied to the test data consisting of 20 samples in order to predict the exercise, i.e., the outcome classe.
+```{r}
+predict_gbm <- predict(fit_gbm, newdata = dat_test)
+predict_gbm
+```
